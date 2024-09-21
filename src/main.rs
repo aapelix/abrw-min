@@ -55,7 +55,7 @@ async fn main() {
     ];
 
     let urls = vec![
-        // this breaks youtube so disabled it for now: "https://easylist.to/easylist/easylist.txt",
+        "https://easylist.to/easylist/easylist.txt",
         "https://easylist-downloads.adblockplus.org/easylist_noelemhide.txt",
         "https://ublockorigin.github.io/uAssets/thirdparties/easylist-cookies.txt",
         "https://ublockorigin.github.io/uAssets/filters/annoyances-cookies.txt",
