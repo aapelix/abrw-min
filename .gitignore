@@ -2,3 +2,5 @@
 Cargo.lock
 cookies.sqlite
 settings.json
+*.tar.zst
+/pkg
