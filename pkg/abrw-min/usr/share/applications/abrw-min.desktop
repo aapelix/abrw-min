@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Abrw
+Exec=abrw-min
+Icon=/usr/share/pixmaps/myicon.png
+Terminal=false
+Type=Application
