@@ -1,12 +1,10 @@
 extern crate gtk;
 extern crate webkit2gtk;
 
-use adblock::lists::FilterSet;
 use gtk::{prelude::*, Button, Entry, Notebook, Popover, Switch};
 use log::info;
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
 use url::Url;
 use webkit2gtk::{WebView, WebViewExt};
 
@@ -71,26 +69,12 @@ pub fn refresh_button_clicked(notebook: &Notebook, refresh_button: &Button) {
     });
 }
 
-pub fn new_tab_button_clicked(
-    notebook: &Notebook,
-    new_tab_button: &Button,
-    search_entry: &Entry,
-    filter_set: &Arc<Mutex<FilterSet>>,
-    adblock_enabled: Rc<RefCell<bool>>,
-) {
+pub fn new_tab_button_clicked(notebook: &Notebook, new_tab_button: &Button, search_entry: &Entry) {
     new_tab_button.connect_clicked({
         let notebook = notebook.clone();
         let search_entry = search_entry.clone();
-        let filter_set = filter_set.clone();
 
-        move |_| {
-            add_tab(
-                &notebook,
-                &search_entry,
-                &filter_set,
-                adblock_enabled.clone(),
-            )
-        }
+        move |_| add_tab(&notebook, &search_entry)
     });
 }
 

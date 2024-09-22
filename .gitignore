@@ -4,3 +4,5 @@ cookies.sqlite
 settings.json
 *.tar.zst
 /pkg
+/favicons
+/filters

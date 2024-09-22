@@ -1,21 +1,20 @@
 extern crate gtk;
 extern crate webkit2gtk;
 
-mod ads;
+// mod ads;
 mod connections;
 mod settings;
 mod styles;
 mod tabs;
 mod webview;
 
-use adblock::lists::FilterSet;
 use gtk::gdk_pixbuf::Pixbuf;
+
 use gtk::{glib::Propagation, prelude::*, Box, Button, Entry, Notebook};
 use gtk::{Label, Popover, Switch};
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
 use styles::apply_css_style;
 use tabs::add_tab;
 use tokio;
@@ -46,37 +45,6 @@ async fn main() {
     let path = PathBuf::from("/usr/share/pixmaps/myicon.png");
     let icon = Pixbuf::from_file(path).expect("Failed to load pixbuf");
     window.set_icon(Some(&icon));
-
-    let initial_rules = vec![
-        String::from("-advertisement-icon."),
-        String::from("-advertisement-management/"),
-        String::from("-advertisement."),
-        String::from("-advertisement/script."),
-    ];
-
-    let urls = vec![
-        "https://easylist.to/easylist/easylist.txt",
-        "https://easylist-downloads.adblockplus.org/easylist_noelemhide.txt",
-        "https://ublockorigin.github.io/uAssets/thirdparties/easylist-cookies.txt",
-        "https://ublockorigin.github.io/uAssets/filters/annoyances-cookies.txt",
-        "https://ublockorigin.github.io/uAssets/thirdparties/easylist-newsletters.txt",
-        "https://ublockorigin.github.io/uAssets/filters/annoyances-others.txt",
-        "https://ublockorigin.github.io/uAssets/thirdparties/easylist-social.txt",
-        "https://ublockorigin.github.io/uAssets/thirdparties/easylist-chat.txt",
-        "https://ublockorigin.github.io/uAssets/thirdparties/easylist-annoyances.txt",
-        "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
-    ];
-
-    let rules = Arc::new(Mutex::new(initial_rules));
-    let filter_set = Arc::new(Mutex::new(FilterSet::new(true)));
-
-    let urls_owned: Vec<String> = urls.iter().map(|&s| s.to_string()).collect();
-
-    tokio::spawn(ads::fetch_rules(
-        urls_owned,
-        rules.clone(),
-        filter_set.clone(),
-    ));
 
     let hbox = Box::new(gtk::Orientation::Vertical, 0);
     let top_bar = Box::new(gtk::Orientation::Horizontal, 0);
@@ -171,7 +139,7 @@ async fn main() {
     let notebook = Notebook::new();
     hbox.pack_start(&notebook, true, true, 0);
 
-    add_tab(&notebook, &search_bar, &filter_set, adblock_enabled.clone());
+    add_tab(&notebook, &search_bar);
 
     apply_css_style(
         &[
@@ -194,13 +162,7 @@ async fn main() {
     connections::back_button_clicked(&notebook, &back_button);
     connections::forward_button_clicked(&notebook, &forward_button);
     connections::refresh_button_clicked(&notebook, &refresh_button);
-    connections::new_tab_button_clicked(
-        &notebook,
-        &new_tab_button,
-        &search_bar,
-        &filter_set,
-        adblock_enabled.clone(),
-    );
+    connections::new_tab_button_clicked(&notebook, &new_tab_button, &search_bar);
     connections::search_entry_activate(&search_bar, &notebook);
     connections::notebook_switch_page(&notebook, &search_bar);
     connections::settings_button_clicked(&settings_button);
