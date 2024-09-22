@@ -175,6 +175,18 @@ pub fn add_filter(web_view: &WebView) {
     let con_man = web_view.user_content_manager();
     let con_man_ptr: *mut WebKitUserContentManager = con_man.as_ref().to_glib_none().0;
 
+    // let script_source = r#" document.querySelectorAll('div[id*="ad"], div[class*="ad"]').forEach(el => el.style.display = 'none'); "#;
+
+    // let user_script = UserScript::new(
+    //     script_source,                                    // JavaScript code
+    //     webkit2gtk::UserContentInjectedFrames::AllFrames, // Inject into all frames
+    //     webkit2gtk::UserScriptInjectionTime::End,         // Inject after the document is loaded
+    //     &[],                                              // Allow list (none in this case)
+    //     &[],                                              // Block list (none in this case)
+    // );
+
+    // UserContentManagerExt::add_script(&con_man.unwrap(), &user_script);
+
     let filter_path = CString::new("filters").unwrap();
     let filter_store = unsafe { webkit_user_content_filter_store_new(filter_path.as_ptr()) };
 

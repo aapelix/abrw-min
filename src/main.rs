@@ -138,6 +138,7 @@ async fn main() {
 
     let notebook = Notebook::new();
     hbox.pack_start(&notebook, true, true, 0);
+    notebook.set_scrollable(true);
 
     add_tab(&notebook, &search_bar);
 
@@ -151,7 +152,7 @@ async fn main() {
         box { background: #202020; }
         entry { background: #2a2a2a; border-color: #2d2d2d; }
         notebook header.top tabs { background: #202020; }
-        notebook header.top tabs tab { background: transparent; border: none; border-radius: 7px; margin: 4px; padding: 10px; transition-duration: 300ms; }
+        notebook header.top tabs tab { min-height: 1px; min-width: 100px; background: transparent; border: none; border-radius: 7px; margin: 4px; padding: 10px; transition-duration: 300ms; }
         notebook header.top tabs tab:checked { background: #2a2a2a }
         notebook header.top tabs tab.reorderable-page { border: none; }
         ",

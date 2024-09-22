@@ -16,6 +16,8 @@ pub fn add_tab(notebook: &Notebook, search_entry: &Entry) {
     let pixbuf_icon = Pixbuf::from_file(path).expect("Failed to create pixbuf");
     let scaled_pixbuf = &pixbuf_icon.scale_simple(25, 25, InterpType::Bilinear);
 
+    tab_box.set_size_request(100, -1);
+
     let tab_favicon = Image::from_pixbuf(scaled_pixbuf.as_ref());
 
     tab_favicon.set_pixel_size(2000);
