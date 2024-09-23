@@ -16,11 +16,19 @@ use webkit2gtk::{
     WebViewExt,
 };
 use webkit2gtk_sys::{
-    webkit_user_content_filter_store_load, webkit_user_content_filter_store_load_finish,
-    webkit_user_content_filter_store_new, webkit_user_content_filter_store_save,
-    webkit_user_content_filter_store_save_finish, webkit_user_content_manager_add_filter,
+    webkit_settings_get_enable_javascript, webkit_user_content_filter_store_load,
+    webkit_user_content_filter_store_load_finish, webkit_user_content_filter_store_new,
+    webkit_user_content_filter_store_save, webkit_user_content_filter_store_save_finish,
+    webkit_user_content_manager_add_filter, webkit_user_content_manager_remove_all_filters,
     WebKitUserContentFilterStore, WebKitUserContentManager,
 };
+
+#[derive(Clone)]
+pub enum WebviewSetting {
+    Javascript,
+    WebGL,
+    AutoMediaPlayback,
+}
 
 const DATA_URL: &'static str =
     "https://easylist-downloads.adblockplus.org/easylist_min_content_blocker.json";
@@ -232,4 +240,53 @@ fn download_filter_list() -> Result<String, Box<dyn Error>> {
     let response = get(DATA_URL)?;
     let text = response.text()?;
     Ok(text)
+}
+
+pub fn toggle_content_filter(webview: &WebView, enable_filter: bool) {
+    let con_man = webview.user_content_manager();
+    let con_man_ptr: *mut WebKitUserContentManager = con_man.as_ref().to_glib_none().0;
+
+    if !enable_filter {
+        add_filter(webview);
+    } else {
+        unsafe { webkit_user_content_manager_remove_all_filters(con_man_ptr as *mut _) }
+    }
+}
+
+pub fn get_webview_setting(webview: &WebView, setting: WebviewSetting) -> Option<bool> {
+    let settings = WebViewExt::settings(webview).unwrap();
+
+    match setting {
+        WebviewSetting::Javascript => {
+            return Some(unsafe {
+                webkit_settings_get_enable_javascript(settings.to_glib_none().0) != 0
+            });
+        }
+        WebviewSetting::WebGL => {
+            return Some(unsafe {
+                webkit_settings_get_enable_javascript(settings.to_glib_none().0) != 0
+            });
+        }
+        WebviewSetting::AutoMediaPlayback => {
+            return Some(unsafe {
+                webkit_settings_get_enable_javascript(settings.to_glib_none().0) != 0
+            });
+        }
+    }
+}
+
+pub fn change_webview_setting(webview: &WebView, setting: WebviewSetting, value: bool) {
+    let settings = WebViewExt::settings(webview).unwrap();
+
+    match setting {
+        WebviewSetting::Javascript => {
+            settings.set_enable_javascript(value);
+        }
+        WebviewSetting::WebGL => {
+            settings.set_enable_webgl(value);
+        }
+        WebviewSetting::AutoMediaPlayback => {
+            settings.set_media_playback_requires_user_gesture(value);
+        }
+    }
 }

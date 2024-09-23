@@ -4,6 +4,9 @@ use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::fs;
 use std::rc::Rc;
+use webkit2gtk::WebView;
+
+use crate::webview::toggle_content_filter;
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Settings {
@@ -143,13 +146,15 @@ pub fn show_settings_window() {
     window.show_all();
 }
 
-pub fn toggle_adblock(adblock_enabled: Rc<RefCell<bool>>) {
+pub fn toggle_adblock(adblock_enabled: Rc<RefCell<bool>>, webview: &WebView) {
     let current_value = *adblock_enabled.borrow();
     *adblock_enabled.borrow_mut() = !current_value;
 
     if current_value {
         println!("Adblocker disabled.");
+        toggle_content_filter(webview, current_value);
     } else {
         println!("Adblocker enabled.");
+        toggle_content_filter(webview, current_value);
     }
 }

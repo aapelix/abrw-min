@@ -1,7 +1,7 @@
 extern crate gtk;
 extern crate webkit2gtk;
 
-use gtk::{prelude::*, Button, Entry, Notebook, Popover, Switch};
+use gtk::{prelude::*, Box, Button, Entry, Label, Notebook, Popover, Switch};
 use log::info;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -9,6 +9,7 @@ use url::Url;
 use webkit2gtk::{WebView, WebViewExt};
 
 use crate::settings::toggle_adblock;
+use crate::webview::{change_webview_setting, get_webview_setting, WebviewSetting};
 use crate::{settings::show_settings_window, tabs::add_tab};
 
 pub fn get_webview(notebook: &Notebook) -> Option<WebView> {
@@ -131,15 +132,98 @@ pub fn search_entry_activate(search_entry: &Entry, notebook: &Notebook) {
     });
 }
 
-pub fn notebook_switch_page(notebook: &Notebook, search_entry: &Entry) {
+pub fn notebook_switch_page(notebook: &Notebook, search_entry: &Entry, menu_popup_box: Box) {
     notebook.connect_switch_page({
         let search_entry = search_entry.clone();
+        let menu_popup_box = menu_popup_box.clone();
 
         move |notebook, _, page_num| {
             if let Some(widget) = notebook.nth_page(Some(page_num)) {
                 if let Some(webview) = widget.downcast_ref::<webkit2gtk::WebView>() {
                     if let Some(uri) = webview.uri() {
                         search_entry.set_text(&uri);
+                    }
+
+                    for child in menu_popup_box.children() {
+                        if let Some(sub_box) = child.downcast_ref::<Box>() {
+                            for sub_child in sub_box.children() {
+                                if let Some(label) = sub_child.downcast_ref::<Label>() {
+                                    let label_text = label.text();
+
+                                    if label_text == "Javascript enabled" {
+                                        for sub_sub_child in sub_box.children() {
+                                            if let Some(_switch) =
+                                                sub_sub_child.downcast_ref::<Switch>()
+                                            {
+                                                let toggle_state = get_webview_setting(
+                                                    &webview,
+                                                    WebviewSetting::Javascript,
+                                                )
+                                                .expect("Failed to get setting");
+
+                                                change_webview_setting(
+                                                    &webview,
+                                                    WebviewSetting::Javascript,
+                                                    toggle_state,
+                                                );
+
+                                                // now i would also need to set the state of the switch
+
+                                                break;
+                                            }
+                                        }
+                                    }
+
+                                    if label_text == "WebGL enabled" {
+                                        for sub_sub_child in sub_box.children() {
+                                            if let Some(_switch) =
+                                                sub_sub_child.downcast_ref::<Switch>()
+                                            {
+                                                let toggle_state = get_webview_setting(
+                                                    &webview,
+                                                    WebviewSetting::WebGL,
+                                                )
+                                                .expect("Failed to get setting");
+
+                                                change_webview_setting(
+                                                    &webview,
+                                                    WebviewSetting::WebGL,
+                                                    toggle_state,
+                                                );
+
+                                                // now i would also need to set the state of the switch
+
+                                                break;
+                                            }
+                                        }
+                                    }
+
+                                    if label_text == "Auto Media Playback enabled" {
+                                        for sub_sub_child in sub_box.children() {
+                                            if let Some(_switch) =
+                                                sub_sub_child.downcast_ref::<Switch>()
+                                            {
+                                                let toggle_state = get_webview_setting(
+                                                    &webview,
+                                                    WebviewSetting::AutoMediaPlayback,
+                                                )
+                                                .expect("Failed to get setting");
+
+                                                change_webview_setting(
+                                                    &webview,
+                                                    WebviewSetting::AutoMediaPlayback,
+                                                    toggle_state,
+                                                );
+
+                                                // now i would also need to set the state of the switch
+
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -162,10 +246,20 @@ pub fn menu_button_clicked(popup: &Popover, menu_button: &Button) {
     });
 }
 
-pub fn adblock_toggle(adblock_toggle: &Switch, adblock_enabled: Rc<RefCell<bool>>) {
+pub fn adblock_toggle(
+    adblock_toggle: &Switch,
+    adblock_enabled: Rc<RefCell<bool>>,
+    notebook: &Notebook,
+) {
     adblock_toggle.connect_active_notify({
-        move |_| {
-            toggle_adblock(adblock_enabled.clone());
+        let notebook = notebook.clone();
+        move |_| match get_webview(&notebook) {
+            Some(webview) => {
+                toggle_adblock(adblock_enabled.clone(), &webview);
+            }
+            None => {
+                info!("Current tab doesn't have a webview")
+            }
         }
     });
 }

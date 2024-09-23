@@ -8,10 +8,12 @@ mod styles;
 mod tabs;
 mod webview;
 
+use connections::get_webview;
 use gtk::gdk_pixbuf::Pixbuf;
 
 use gtk::{glib::Propagation, prelude::*, Box, Button, Entry, Notebook};
 use gtk::{Label, Popover, Switch};
+use settings::Settings;
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -19,6 +21,7 @@ use styles::apply_css_style;
 use tabs::add_tab;
 use tokio;
 use webkit2gtk::{CookieManagerExt, WebContext, WebContextExt};
+use webview::{change_webview_setting, WebviewSetting};
 
 #[tokio::main]
 async fn main() {
@@ -92,19 +95,73 @@ async fn main() {
 
     let menu_popup = Popover::new(Some(&menu_button));
 
-    let menu_popup_box = Box::new(gtk::Orientation::Horizontal, 0);
+    let menu_popup_box = Box::new(gtk::Orientation::Vertical, 0);
 
-    let adblock_toggle_label = Label::new(Some("Enable Adblock"));
+    let adblock_box = Box::new(gtk::Orientation::Horizontal, 0);
+    let adblock_toggle_label = Label::new(Some("Adblock enabled"));
     let adblock_toggle = Switch::new();
+
     adblock_toggle.set_state(*adblock_enabled.clone().borrow());
 
-    menu_popup_box.pack_start(&adblock_toggle_label, false, false, 5);
-    menu_popup_box.pack_end(&adblock_toggle, false, false, 5);
+    adblock_box.pack_start(&adblock_toggle_label, false, false, 5);
+    adblock_box.pack_end(&adblock_toggle, false, false, 5);
+
+    menu_popup_box.pack_start(&adblock_box, false, false, 5);
+
+    let notebook = Notebook::new();
+
+    for setting in [
+        WebviewSetting::Javascript,
+        WebviewSetting::WebGL,
+        WebviewSetting::AutoMediaPlayback,
+    ]
+    .iter()
+    .cloned()
+    {
+        let toggle = create_toggle_switch(setting.clone(), {
+            let notebook = notebook.clone();
+            move |is_active| match get_webview(&notebook) {
+                Some(webview) => match setting {
+                    WebviewSetting::Javascript => {
+                        println!(
+                            "Javascript is now {}",
+                            if is_active { "enabled" } else { "disabled" }
+                        );
+
+                        change_webview_setting(&webview, WebviewSetting::Javascript, is_active);
+                    }
+                    WebviewSetting::WebGL => {
+                        println!(
+                            "WebGL is now {}",
+                            if is_active { "enabled" } else { "disabled" }
+                        );
+
+                        change_webview_setting(&webview, WebviewSetting::WebGL, is_active);
+                    }
+                    WebviewSetting::AutoMediaPlayback => {
+                        println!(
+                            "Auto Media Playback is now {}",
+                            if is_active { "enabled" } else { "disabled" }
+                        );
+
+                        change_webview_setting(
+                            &webview,
+                            WebviewSetting::AutoMediaPlayback,
+                            is_active,
+                        );
+                    }
+                },
+                None => {
+                    println!("No webview")
+                }
+            }
+        });
+        menu_popup_box.pack_start(&toggle, false, false, 5);
+    }
 
     menu_popup.add(&menu_popup_box);
 
-    adblock_toggle.show();
-    adblock_toggle_label.show();
+    menu_popup_box.show_all();
     menu_popup_box.show();
 
     menu_buttons_box.pack_start(&new_tab_button, false, false, 5);
@@ -136,7 +193,6 @@ async fn main() {
 
     hbox.pack_start(&top_bar, false, false, 5);
 
-    let notebook = Notebook::new();
     hbox.pack_start(&notebook, true, true, 0);
     notebook.set_scrollable(true);
 
@@ -165,10 +221,10 @@ async fn main() {
     connections::refresh_button_clicked(&notebook, &refresh_button);
     connections::new_tab_button_clicked(&notebook, &new_tab_button, &search_bar);
     connections::search_entry_activate(&search_bar, &notebook);
-    connections::notebook_switch_page(&notebook, &search_bar);
+    connections::notebook_switch_page(&notebook, &search_bar, menu_popup_box);
     connections::settings_button_clicked(&settings_button);
     connections::menu_button_clicked(&menu_popup, &menu_button);
-    connections::adblock_toggle(&adblock_toggle, adblock_enabled);
+    connections::adblock_toggle(&adblock_toggle, adblock_enabled, &notebook);
 
     window.connect_delete_event(|_, _| {
         gtk::main_quit();
@@ -180,4 +236,35 @@ async fn main() {
 
     // Run the GTK main loop
     gtk::main();
+}
+
+fn create_toggle_switch<F>(setting: WebviewSetting, callback: F) -> Box
+where
+    F: Fn(bool) + 'static,
+{
+    let menu_popup_box = Box::new(gtk::Orientation::Horizontal, 5);
+    let settings = Settings::load();
+
+    let (label_text, toggle_state) = match setting {
+        WebviewSetting::Javascript => ("Javascript enabled", settings.enable_javascript),
+        WebviewSetting::WebGL => ("WebGL enabled", settings.enable_webgl),
+        WebviewSetting::AutoMediaPlayback => (
+            "Auto Media Playback enabled",
+            settings.media_playback_requires_user_gesture,
+        ),
+    };
+
+    let toggle_label = Label::new(Some(label_text));
+    let toggle = Switch::new();
+    toggle.set_active(toggle_state);
+
+    toggle.connect_active_notify(move |switch| {
+        let is_active = switch.is_active();
+        callback(is_active);
+    });
+
+    menu_popup_box.pack_start(&toggle_label, false, false, 5);
+    menu_popup_box.pack_end(&toggle, false, false, 5);
+
+    menu_popup_box
 }
