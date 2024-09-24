@@ -20,16 +20,26 @@ use std::rc::Rc;
 use styles::apply_css_style;
 use tabs::add_tab;
 use tokio;
-use webkit2gtk::{CookieManagerExt, WebContext, WebContextExt};
+use webkit2gtk::{CookieManagerExt, WebContext, WebContextExt, WebViewExt};
 use webview::{change_webview_setting, WebviewSetting};
+
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+static WINDOW_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 #[tokio::main]
 async fn main() {
-    let adblock_enabled = Rc::new(RefCell::new(true));
-
     std::env::set_var("GDK_BACKEND", "x11");
-
     gtk::init().expect("Failed to initialize GTK.");
+    create_window("https://start.duckduckgo.com/");
+
+    gtk::main();
+}
+
+pub fn create_window(default_tab_url: &str) {
+    WINDOW_COUNT.fetch_add(1, Ordering::SeqCst);
+
+    let adblock_enabled = Rc::new(RefCell::new(true));
 
     let context = WebContext::default().unwrap();
     let cookie_manager = WebContextExt::cookie_manager(&context).unwrap();
@@ -43,7 +53,7 @@ async fn main() {
 
     let window = gtk::Window::new(gtk::WindowType::Toplevel);
     window.set_title("aapelix/abrw");
-    window.set_default_size(1200, 700);
+    window.set_default_size(1500, 900);
 
     let path = PathBuf::from("/usr/share/pixmaps/myicon.png");
     let icon = Pixbuf::from_file(path).expect("Failed to load pixbuf");
@@ -189,14 +199,32 @@ async fn main() {
     top_bar.pack_end(&menu_buttons_box, false, false, 0);
 
     search_box.set_hexpand(true);
-    search_bar.set_text("https://start.duckduckgo.com/");
+    search_bar.set_text(&default_tab_url);
 
     hbox.pack_start(&top_bar, false, false, 5);
 
     hbox.pack_start(&notebook, true, true, 0);
     notebook.set_scrollable(true);
 
-    add_tab(&notebook, &search_bar);
+    add_tab(&notebook, &search_bar, Some(&default_tab_url));
+
+    notebook.connect_drag_end(move |notebook, _| {
+        match get_webview(&notebook) {
+            Some(webview) => {
+                let uri = webview.uri();
+
+                match uri {
+                    Some(string) => {
+                        create_window(&string);
+                    }
+                    None => {}
+                }
+            }
+            None => {
+                println!("No web view");
+            }
+        };
+    });
 
     apply_css_style(
         &[
@@ -226,16 +254,19 @@ async fn main() {
     connections::menu_button_clicked(&menu_popup, &menu_button);
     connections::adblock_toggle(&adblock_toggle, adblock_enabled, &notebook);
 
-    window.connect_delete_event(|_, _| {
-        gtk::main_quit();
-        Propagation::Stop
+    window.connect_delete_event(move |_, _| {
+        WINDOW_COUNT.fetch_sub(1, Ordering::SeqCst);
+
+        if WINDOW_COUNT.load(Ordering::SeqCst) == 0 {
+            gtk::main_quit();
+            Propagation::Stop
+        } else {
+            Propagation::Proceed
+        }
     });
 
     // Show all widgets
     window.show_all();
-
-    // Run the GTK main loop
-    gtk::main();
 }
 
 fn create_toggle_switch<F>(setting: WebviewSetting, callback: F) -> Box

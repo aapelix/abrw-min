@@ -1,5 +1,5 @@
-use gtk::{glib::Propagation, Box, Label, Orientation, Switch, Window, WindowType};
 use gtk::{prelude::*, STYLE_PROVIDER_PRIORITY_APPLICATION};
+use gtk::{Box, Label, Orientation, Switch, Window, WindowType};
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::fs;
@@ -43,19 +43,6 @@ pub fn show_settings_window() {
     let window = Window::new(WindowType::Toplevel);
     window.set_title("Abrw Settings");
     window.set_default_size(500, 700);
-
-    window.connect_button_press_event(|window, event| {
-        if event.button() == 1 {
-            window.begin_move_drag(
-                event.button().try_into().unwrap(),
-                event.root().0 as i32,
-                event.root().1 as i32,
-                event.time(),
-            );
-        }
-
-        Propagation::Stop
-    });
 
     let vbox = Box::new(Orientation::Vertical, 10);
 

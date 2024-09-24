@@ -75,7 +75,13 @@ pub fn new_tab_button_clicked(notebook: &Notebook, new_tab_button: &Button, sear
         let notebook = notebook.clone();
         let search_entry = search_entry.clone();
 
-        move |_| add_tab(&notebook, &search_entry)
+        move |_| {
+            add_tab(
+                &notebook,
+                &search_entry,
+                Some("https://start.duckduckgo.com/"),
+            )
+        }
     });
 }
 

@@ -1,15 +1,19 @@
-use crate::styles::apply_css_style;
 use crate::webview::create_webview;
+use crate::{create_window, styles::apply_css_style};
 use gtk::{
     gdk_pixbuf::{InterpType, Pixbuf},
+    gio::SimpleAction,
     Box, Button, Entry, Label, Notebook,
 };
 use gtk::{prelude::*, Image};
 use log::info;
 use std::path::PathBuf;
-use webkit2gtk::WebViewExt;
+use webkit2gtk::{
+    ContextMenu, ContextMenuAction, ContextMenuExt, ContextMenuItem, ContextMenuItemExt,
+    HitTestResultExt, WebViewExt,
+};
 
-pub fn add_tab(notebook: &Notebook, search_entry: &Entry) {
+pub fn add_tab(notebook: &Notebook, search_entry: &Entry, uri: Option<&str>) {
     let tab_box = Box::new(gtk::Orientation::Horizontal, 5);
     let tab_label = Label::new(Some("New tab"));
     let path = PathBuf::from("/usr/share/pixmaps/myicon.png");
@@ -41,7 +45,15 @@ pub fn add_tab(notebook: &Notebook, search_entry: &Entry) {
     tab_box.pack_start(&close_button, false, false, 0);
 
     let webview = create_webview();
-    webview.load_uri("https://start.duckduckgo.com/");
+
+    match uri {
+        Some(uri) => {
+            webview.load_uri(uri);
+        }
+        None => {
+            webview.load_uri("https://start.duckduckgo.com/");
+        }
+    }
 
     let search_entry_clone = search_entry.clone();
     webview.connect_notify_local(Some("uri"), move |webview, _| {
@@ -128,10 +140,78 @@ pub fn add_tab(notebook: &Notebook, search_entry: &Entry) {
     notebook.set_tab_reorderable(&webview, true);
     notebook.set_tab_detachable(&webview, true);
 
+    let notebook_webview = notebook.clone();
+    let search_entry_clone = search_entry.clone();
+
+    webview.connect_context_menu(move |_webview, context_menu, _event, hit_test_result| {
+        let menu: ContextMenu = context_menu.clone();
+
+        for menu_item in menu.items() {
+            let action = menu_item.stock_action();
+
+            if action == ContextMenuAction::OpenLinkInNewWindow
+                || action == ContextMenuAction::OpenLink
+            {
+                menu.remove(&menu_item);
+            }
+        }
+
+        let open_link_in_new_tab_act = create_action_with_callback("open-link-in-new-tab", {
+            let hit_test_result = hit_test_result.clone();
+
+            let notebook_webview = notebook_webview.clone();
+            let search_entry_clone = search_entry_clone.clone();
+
+            move |_, _| {
+                if let Some(link_uri) = hit_test_result.link_uri() {
+                    add_tab(&notebook_webview, &search_entry_clone, Some(&link_uri));
+                }
+            }
+        });
+
+        let open_link_in_new_window_act = create_action_with_callback("open-link-in-new-window", {
+            let hit_test_result = hit_test_result.clone();
+
+            move |_, _| {
+                if let Some(link_uri) = hit_test_result.link_uri() {
+                    create_window(&link_uri);
+                }
+            }
+        });
+
+        let open_link_in_new_tab =
+            ContextMenuItem::from_gaction(&open_link_in_new_tab_act, "Open Link in New Tab", None);
+
+        let open_link_in_new_window = ContextMenuItem::from_gaction(
+            &open_link_in_new_window_act,
+            "Open Link in Window",
+            None,
+        );
+
+        let separator = ContextMenuItem::new_separator();
+
+        menu.prepend(&separator);
+        menu.prepend(&open_link_in_new_window);
+        menu.prepend(&open_link_in_new_tab);
+
+        false
+    });
+
     let notebook = notebook.clone();
     close_button.connect_clicked(move |_| {
         notebook.remove_page(Some(tab_index));
     });
 
     search_entry.set_is_focus(true);
+}
+
+fn create_action_with_callback<F>(name: &str, callback: F) -> SimpleAction
+where
+    F: Fn(&SimpleAction, Option<&gtk::glib::Variant>) + 'static, // Ensure the closure is `'static` for use in the signal
+{
+    let action = SimpleAction::new(name, None);
+
+    action.connect_activate(callback);
+
+    action
 }
