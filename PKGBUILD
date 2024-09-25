@@ -1,5 +1,5 @@
 pkgname=abrw-min
-pkgver=2.0
+pkgver=2.1
 pkgrel=1
 pkgdesc="abrw"
 arch=('x86_64')
@@ -25,4 +25,5 @@ package() {
   install -Dm644 "$srcdir/icons/plus.svg" "$pkgdir/usr/share/pixmaps/plus.svg"
   install -Dm644 "$srcdir/icons/rotate-cw.svg" "$pkgdir/usr/share/pixmaps/rotate-cw.svg"
   install -Dm644 "$srcdir/icons/shield-ban.svg" "$pkgdir/usr/share/pixmaps/shield-ban.svg"
+  install -Dm644 "$srcdir/icons/download.svg" "$pkgdir/usr/share/pixmaps/download.svg"
 }

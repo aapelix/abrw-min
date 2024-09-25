@@ -3,9 +3,12 @@ use gtk::gio::ffi::{GAsyncResult, GCancellable};
 use gtk::glib::ffi::g_bytes_new;
 use gtk::glib::gobject_ffi::GObject;
 use gtk::glib::{ffi::GError, translate::ToGlibPtr};
-use gtk::prelude::{DialogExt, FileChooserExt, GtkWindowExt};
+use gtk::prelude::{FileChooserExt, FileExt, NativeDialogExt};
+use gtk::{FileChooserAction, FileChooserNative, ResponseType, Window};
 use reqwest::blocking::get;
+use std::env;
 use std::ffi::{c_void, CStr, CString};
+use std::path::Path;
 use std::ptr::null;
 use std::{
     fs::{create_dir_all, write, File},
@@ -61,27 +64,45 @@ pub fn create_webview() -> WebView {
 
     context.set_favicon_database_directory(Some("favicons"));
 
-    context.connect_download_started(move |_view, download| {
-        let download: &Download = download;
+    context.connect_download_started(move |_, download| {
+        let download: Download = download.clone();
 
-        let dialog = gtk::FileChooserDialog::new(
+        let file_chooser = FileChooserNative::new(
             Some("Save File"),
-            Some(&gtk::Window::new(gtk::WindowType::Toplevel)),
-            gtk::FileChooserAction::Save,
+            Some(&Window::new(gtk::WindowType::Popup)),
+            FileChooserAction::Save,
+            None,
+            None,
         );
 
-        dialog.set_current_name("thisisnotworkingyet");
+        let home_dir = env::var("HOME").unwrap_or_else(|_| String::from("/"));
+        let downloads_path = Path::new(&home_dir).join("Downloads");
 
-        let response = dialog.run();
+        file_chooser.set_current_folder(&downloads_path);
+        file_chooser.run();
 
-        if response == gtk::ResponseType::Accept {
-            let filename = dialog.filename().unwrap();
-            download.set_destination(&filename.to_str().unwrap());
-        }
+        file_chooser.set_do_overwrite_confirmation(true);
 
-        // Destroy the dialog
+        download.connect_estimated_progress_notify(move |download| {
+            let current_progress = download.estimated_progress();
+            println!("{}", current_progress)
+        });
 
-        dialog.close();
+        file_chooser.connect_response(move |dialog, res| {
+            if res == ResponseType::Accept {
+                if let Some(file) = dialog.file() {
+                    if let Some(file_path) = file.path() {
+                        download.set_destination(&format!("file://{}", file_path.display()));
+                        println!("{}", file_path.display());
+                    }
+                }
+            } else {
+                download.cancel();
+            }
+            dialog.destroy();
+        });
+
+        file_chooser.show();
     });
 
     let webview: WebView = WebView::with_context(context);
@@ -182,18 +203,6 @@ pub fn add_filter(web_view: &WebView) {
 
     let con_man = web_view.user_content_manager();
     let con_man_ptr: *mut WebKitUserContentManager = con_man.as_ref().to_glib_none().0;
-
-    // let script_source = r#" document.querySelectorAll('div[id*="ad"], div[class*="ad"]').forEach(el => el.style.display = 'none'); "#;
-
-    // let user_script = UserScript::new(
-    //     script_source,                                    // JavaScript code
-    //     webkit2gtk::UserContentInjectedFrames::AllFrames, // Inject into all frames
-    //     webkit2gtk::UserScriptInjectionTime::End,         // Inject after the document is loaded
-    //     &[],                                              // Allow list (none in this case)
-    //     &[],                                              // Block list (none in this case)
-    // );
-
-    // UserContentManagerExt::add_script(&con_man.unwrap(), &user_script);
 
     let filter_path = CString::new("filters").unwrap();
     let filter_store = unsafe { webkit_user_content_filter_store_new(filter_path.as_ptr()) };

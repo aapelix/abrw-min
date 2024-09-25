@@ -17,13 +17,12 @@ use settings::{show_settings_window, Settings};
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use styles::apply_css_style;
 use tabs::add_tab;
 use tokio;
 use webkit2gtk::{CookieManagerExt, WebContext, WebContextExt, WebViewExt};
 use webview::{change_webview_setting, WebviewSetting};
-
-use std::sync::atomic::{AtomicUsize, Ordering};
 
 static WINDOW_COUNT: AtomicUsize = AtomicUsize::new(0);
 
@@ -110,7 +109,8 @@ pub fn create_window(default_tab_url: &str) {
     let menu_buttons_box = Box::new(gtk::Orientation::Horizontal, 0);
 
     let new_tab_button = create_button_with_icon("plus");
-    let book_mark_button = create_button_with_icon("bookmark");
+    let download_button = create_button_with_icon("download");
+
     let menu_button = create_button_with_icon("shield-ban");
     let settings_button = create_button_with_icon("align-justify");
 
@@ -208,14 +208,14 @@ pub fn create_window(default_tab_url: &str) {
     menu_popup_box.show_all();
     menu_popup_box.show();
 
-    menu_buttons_box.pack_start(&book_mark_button, false, false, 5);
+    menu_buttons_box.pack_start(&download_button, false, false, 5);
     menu_buttons_box.pack_start(&menu_button, false, false, 5);
     menu_buttons_box.pack_start(&settings_button, false, false, 5);
 
     apply_css_style(
         &[
             &new_tab_button.upcast_ref(),
-            &book_mark_button.upcast_ref(),
+            &download_button.upcast_ref(),
             &menu_button.upcast_ref(),
             &settings_button.upcast_ref(),
         ],
