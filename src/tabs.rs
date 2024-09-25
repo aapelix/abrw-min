@@ -2,7 +2,6 @@ use crate::webview::create_webview;
 use crate::{create_window, styles::apply_css_style};
 use gtk::prelude::*;
 use gtk::{gio::SimpleAction, Box, Button, Entry, Label, Notebook};
-use log::info;
 use webkit2gtk::{
     ContextMenu, ContextMenuAction, ContextMenuExt, ContextMenuItem, ContextMenuItemExt,
     HitTestResultExt, WebViewExt,
@@ -49,6 +48,8 @@ pub fn add_tab(notebook: &Notebook, search_entry: &Entry, uri: Option<&str>) {
         }
     });
 
+    let max_length = 15;
+
     let notebook_clone = notebook.clone();
     webview.connect_title_notify(move |webview| {
         let notebook = notebook_clone.clone();
@@ -59,7 +60,13 @@ pub fn add_tab(notebook: &Notebook, search_entry: &Entry, uri: Option<&str>) {
             .map(|s| s.to_string())
             .unwrap_or_else(|| "Untitled".to_string());
 
-        info!("Title changed {}", title);
+        let truncated_title: String = title.chars().take(max_length).collect();
+
+        let final_title = if title.chars().count() > max_length {
+            format!("{}...", truncated_title)
+        } else {
+            truncated_title
+        };
 
         let current_page = notebook.current_page();
 
@@ -68,7 +75,7 @@ pub fn add_tab(notebook: &Notebook, search_entry: &Entry, uri: Option<&str>) {
                 if let Some(tab_box) = tab.downcast_ref::<gtk::Container>() {
                     for child in tab_box.children() {
                         if let Some(label) = child.downcast_ref::<gtk::Label>() {
-                            label.set_label(&title);
+                            label.set_label(&final_title);
                         }
                     }
                 }

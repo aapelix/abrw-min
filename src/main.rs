@@ -157,7 +157,7 @@ pub fn create_window(default_tab_url: &str) {
     for setting in [
         WebviewSetting::Javascript,
         WebviewSetting::WebGL,
-        WebviewSetting::AutoMediaPlayback,
+        WebviewSetting::JsClipboardAccess,
     ]
     .iter()
     .cloned()
@@ -182,15 +182,15 @@ pub fn create_window(default_tab_url: &str) {
 
                         change_webview_setting(&webview, WebviewSetting::WebGL, is_active);
                     }
-                    WebviewSetting::AutoMediaPlayback => {
+                    WebviewSetting::JsClipboardAccess => {
                         println!(
-                            "Auto Media Playback is now {}",
+                            "Js clipboard access is now {}",
                             if is_active { "enabled" } else { "disabled" }
                         );
 
                         change_webview_setting(
                             &webview,
-                            WebviewSetting::AutoMediaPlayback,
+                            WebviewSetting::JsClipboardAccess,
                             is_active,
                         );
                     }
@@ -355,9 +355,9 @@ where
     let (label_text, toggle_state) = match setting {
         WebviewSetting::Javascript => ("Javascript enabled", settings.enable_javascript),
         WebviewSetting::WebGL => ("WebGL enabled", settings.enable_webgl),
-        WebviewSetting::AutoMediaPlayback => (
-            "Auto Media Playback enabled",
-            settings.media_playback_requires_user_gesture,
+        WebviewSetting::JsClipboardAccess => (
+            "Js Can access clipboard",
+            settings.javascript_can_access_clipboard,
         ),
     };
 

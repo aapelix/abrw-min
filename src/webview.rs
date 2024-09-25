@@ -19,7 +19,8 @@ use webkit2gtk::{
     WebViewExt,
 };
 use webkit2gtk_sys::{
-    webkit_settings_get_enable_javascript, webkit_user_content_filter_store_load,
+    webkit_settings_get_enable_javascript, webkit_settings_get_enable_webgl,
+    webkit_settings_get_javascript_can_access_clipboard, webkit_user_content_filter_store_load,
     webkit_user_content_filter_store_load_finish, webkit_user_content_filter_store_new,
     webkit_user_content_filter_store_save, webkit_user_content_filter_store_save_finish,
     webkit_user_content_manager_add_filter, webkit_user_content_manager_remove_all_filters,
@@ -30,7 +31,7 @@ use webkit2gtk_sys::{
 pub enum WebviewSetting {
     Javascript,
     WebGL,
-    AutoMediaPlayback,
+    JsClipboardAccess,
 }
 
 const DATA_URL: &'static str =
@@ -61,8 +62,6 @@ pub fn create_webview() -> WebView {
             context
         })
     };
-
-    context.set_favicon_database_directory(Some("favicons"));
 
     context.connect_download_started(move |_, download| {
         let download: Download = download.clone();
@@ -113,7 +112,23 @@ pub fn create_webview() -> WebView {
     let settings_json = Settings::load();
 
     settings.set_enable_developer_extras(true);
-    settings.set_enable_smooth_scrolling(true);
+    settings.set_enable_smooth_scrolling(false);
+    settings.set_enable_plugins(false);
+
+    settings.set_enable_html5_local_storage(settings_json.enable_html5_database);
+    settings.set_enable_html5_database(settings_json.enable_html5_local_storage);
+
+    settings.set_enable_xss_auditor(settings_json.enable_xss_auditor);
+    settings.set_enable_hyperlink_auditing(settings_json.enable_hyperlink_auditing);
+
+    settings.set_enable_dns_prefetching(settings_json.enable_dns_prefetching);
+    settings.set_allow_modal_dialogs(settings_json.allow_modal_dialogs);
+    settings.set_enable_site_specific_quirks(settings_json.enable_site_specific_quirks);
+
+    settings.set_javascript_can_open_windows_automatically(
+        settings_json.javascript_can_open_windows_automatically,
+    );
+    settings.set_javascript_can_access_clipboard(settings_json.javascript_can_access_clipboard);
 
     settings.set_enable_javascript(settings_json.enable_javascript);
     settings.set_enable_webgl(settings_json.enable_webgl);
@@ -273,12 +288,12 @@ pub fn get_webview_setting(webview: &WebView, setting: WebviewSetting) -> Option
         }
         WebviewSetting::WebGL => {
             return Some(unsafe {
-                webkit_settings_get_enable_javascript(settings.to_glib_none().0) != 0
+                webkit_settings_get_enable_webgl(settings.to_glib_none().0) != 0
             });
         }
-        WebviewSetting::AutoMediaPlayback => {
+        WebviewSetting::JsClipboardAccess => {
             return Some(unsafe {
-                webkit_settings_get_enable_javascript(settings.to_glib_none().0) != 0
+                webkit_settings_get_javascript_can_access_clipboard(settings.to_glib_none().0) != 0
             });
         }
     }
@@ -294,8 +309,8 @@ pub fn change_webview_setting(webview: &WebView, setting: WebviewSetting, value:
         WebviewSetting::WebGL => {
             settings.set_enable_webgl(value);
         }
-        WebviewSetting::AutoMediaPlayback => {
-            settings.set_media_playback_requires_user_gesture(value);
+        WebviewSetting::JsClipboardAccess => {
+            settings.set_javascript_can_access_clipboard(value);
         }
     }
 }

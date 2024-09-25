@@ -213,13 +213,13 @@ pub fn notebook_switch_page(notebook: &Notebook, search_entry: &Entry, menu_popu
                                             {
                                                 let toggle_state = get_webview_setting(
                                                     &webview,
-                                                    WebviewSetting::AutoMediaPlayback,
+                                                    WebviewSetting::JsClipboardAccess,
                                                 )
                                                 .expect("Failed to get setting");
 
                                                 change_webview_setting(
                                                     &webview,
-                                                    WebviewSetting::AutoMediaPlayback,
+                                                    WebviewSetting::JsClipboardAccess,
                                                     toggle_state,
                                                 );
 
