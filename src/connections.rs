@@ -2,7 +2,6 @@ extern crate gtk;
 extern crate webkit2gtk;
 
 use gtk::{prelude::*, Box, Button, Entry, Label, Notebook, Popover, Switch};
-use log::info;
 use std::cell::RefCell;
 use std::rc::Rc;
 use url::Url;
@@ -36,7 +35,7 @@ pub fn back_button_clicked(notebook: &Notebook, back_button: &Button) {
                 }
             }
             None => {
-                info!("Current tab doesn't have a webview")
+                println!("Current tab doesn't have a webview")
             }
         }
     });
@@ -52,7 +51,7 @@ pub fn forward_button_clicked(notebook: &Notebook, forward_button: &Button) {
                 }
             }
             None => {
-                info!("Current tab doesn't have a webview")
+                println!("Current tab doesn't have a webview")
             }
         }
     });
@@ -66,7 +65,7 @@ pub fn refresh_button_clicked(notebook: &Notebook, refresh_button: &Button) {
                 webview.reload();
             }
             None => {
-                info!("Current tab doesn't have a webview")
+                println!("Current tab doesn't have a webview")
             }
         }
     });
@@ -99,12 +98,12 @@ pub fn search_entry_activate(search_entry: &Entry, notebook: &Notebook) {
                     if let Ok(url) = Url::parse(url_str) {
                         if url.scheme() == "http" || url.scheme() == "https" {
                             if url.host_str() == Some("localhost") || url.path() == "/" {
-                                info!("Local URL detected!");
+                                println!("Local URL detected!");
                                 webview.load_uri(&url_str);
                                 return;
                             }
                         } else if url.scheme() == "file" {
-                            info!("File URL detected!");
+                            println!("File URL detected!");
                             webview.load_uri(&url_str);
                             return;
                         }
@@ -117,18 +116,18 @@ pub fn search_entry_activate(search_entry: &Entry, notebook: &Notebook) {
                     let domain_like = url_str.contains('.') && !url_str.contains(' ');
 
                     if domain_like {
-                        info!("URL detected (no scheme)!");
+                        println!("URL detected (no scheme)!");
                         webview.load_uri(&format!("https://{}", &url_str));
 
                         return;
                     }
 
-                    info!("Search query detected");
+                    println!("Search query detected");
                     let search_query = url.to_string().replace(" ", "+");
                     webview.load_uri(&format!("https://duckduckgo.com/?q={}", &search_query));
                     return;
                 }
-                None => info!("Current tab doesn't have a webview"),
+                None => println!("Current tab doesn't have a webview"),
             }
         }
     });
@@ -299,7 +298,7 @@ pub fn adblock_toggle(
                 toggle_adblock(adblock_enabled.clone(), &webview);
             }
             None => {
-                info!("Current tab doesn't have a webview")
+                println!("Current tab doesn't have a webview")
             }
         }
     });

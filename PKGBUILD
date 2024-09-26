@@ -1,5 +1,5 @@
 pkgname=abrw-min
-pkgver=2.3
+pkgver=2.3.5
 pkgrel=1
 pkgdesc="abrw"
 arch=('x86_64')

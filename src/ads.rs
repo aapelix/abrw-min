@@ -1,6 +1,5 @@
 use adblock::lists::{FilterSet, ParseOptions};
 use adblock::{blocker::BlockerResult, request::Request, Engine};
-use log::{error, info};
 use reqwest;
 use std::borrow::Cow;
 use std::error::Error;
@@ -10,7 +9,7 @@ use webkit2gtk::{URIRequestExt, WebViewExt};
 
 /// Fetches a block list from a given URL.
 pub async fn fetch_block_list(block_list_url: &str) -> Result<Vec<String>, Box<dyn Error>> {
-    info!("Fetching block lists");
+    println!("Fetching block lists");
 
     let response = reqwest::get(block_list_url).await?;
     let block_list = response
@@ -67,21 +66,21 @@ fn log_result(result: BlockerResult, webview: &webkit2gtk::WebView) {
             filter,
         } => {
             if important {
-                info!("Request matched an important rule and should be blocked.");
+                println!("Request matched an important rule and should be blocked.");
                 webview.stop_loading()
             } else {
-                info!("Request matched a non-important rule.");
+                println!("Request matched a non-important rule.");
                 if let Some(redirect_url) = redirect {
-                    info!("Redirecting to: {}", redirect_url);
+                    println!("Redirecting to: {}", redirect_url);
                     webview.stop_loading()
                 } else if let Some(rewritten_url) = rewritten_url {
-                    info!("Rewritten URL: {}", rewritten_url);
+                    println!("Rewritten URL: {}", rewritten_url);
                     webview.stop_loading()
                 } else if let Some(exception) = exception {
-                    info!("Request is an exception: {}", exception);
+                    println!("Request is an exception: {}", exception);
                     webview.stop_loading()
                 } else if let Some(filter) = filter {
-                    info!("Request matched filter: {}", filter);
+                    println!("Request matched filter: {}", filter);
                     webview.stop_loading()
                 }
             }

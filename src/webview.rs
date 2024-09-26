@@ -63,6 +63,8 @@ pub fn create_webview() -> WebView {
         })
     };
 
+    context.set_cache_model(webkit2gtk::CacheModel::DocumentViewer);
+
     context.connect_download_started(move |_, download| {
         let download: Download = download.clone();
 
