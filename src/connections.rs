@@ -77,13 +77,7 @@ pub fn new_tab_button_clicked(notebook: &Notebook, new_tab_button: &Button, sear
         let notebook = notebook.clone();
         let search_entry = search_entry.clone();
 
-        move |_| {
-            add_tab(
-                &notebook,
-                &search_entry,
-                Some("https://start.duckduckgo.com/"),
-            )
-        }
+        move |_| add_tab(&notebook, &search_entry, None)
     });
 }
 
@@ -261,17 +255,13 @@ pub fn settings_button_clicked(
             let search_entry = search_entry.clone();
 
             move || {
-                add_tab(
-                    &notebook,
-                    &search_entry,
-                    Some("https://start.duckduckgo.com/"),
-                );
+                add_tab(&notebook, &search_entry, None);
             }
         });
 
         create_button_with_callback("New window", &popup_box, "F2", {
             move || {
-                create_window("https://start.duckduckgo.com/");
+                create_window(None);
             }
         });
 

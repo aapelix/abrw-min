@@ -30,12 +30,12 @@ static WINDOW_COUNT: AtomicUsize = AtomicUsize::new(0);
 async fn main() {
     std::env::set_var("GDK_BACKEND", "x11");
     gtk::init().expect("Failed to initialize GTK.");
-    create_window("https://start.duckduckgo.com/");
+    create_window(None);
 
     gtk::main();
 }
 
-pub fn create_window(default_tab_url: &str) {
+pub fn create_window(default_tab_url: Option<&str>) {
     WINDOW_COUNT.fetch_add(1, Ordering::SeqCst);
 
     let adblock_enabled = Rc::new(RefCell::new(true));
@@ -229,16 +229,23 @@ pub fn create_window(default_tab_url: &str) {
     top_bar.pack_start(&search_bar, true, true, 5);
     top_bar.pack_end(&menu_buttons_box, false, false, 0);
 
+    match default_tab_url {
+        Some(url) => search_bar.set_text(&url),
+        None => search_bar.set_text(""),
+    }
+
     search_bar.set_halign(gtk::Align::Fill);
     search_bar.set_hexpand(true);
-    search_bar.set_text(&default_tab_url);
 
     hbox.pack_start(&top_bar, false, false, 5);
 
     hbox.pack_start(&notebook, true, true, 0);
     notebook.set_scrollable(true);
 
-    add_tab(&notebook, &search_bar, Some(&default_tab_url));
+    match default_tab_url {
+        Some(url) => add_tab(&notebook, &search_bar, Some(url)),
+        None => add_tab(&notebook, &search_bar, None),
+    }
 
     notebook.connect_drag_end(move |notebook, _| {
         match get_webview(&notebook) {
@@ -247,7 +254,7 @@ pub fn create_window(default_tab_url: &str) {
 
                 match uri {
                     Some(string) => {
-                        create_window(&string);
+                        create_window(Some(&string));
                     }
                     None => {}
                 }
@@ -308,16 +315,12 @@ pub fn create_window(default_tab_url: &str) {
 
         match keyval {
             constants::F1 => {
-                add_tab(
-                    &notebook,
-                    &search_bar,
-                    Some("https://start.duckduckgo.com/"),
-                );
+                add_tab(&notebook, &search_bar, None);
                 Propagation::Stop
             }
 
             constants::F2 => {
-                create_window("https://start.duckduckgo.com/");
+                create_window(None);
                 Propagation::Stop
             }
 
