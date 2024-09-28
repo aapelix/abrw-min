@@ -63,6 +63,11 @@ pub fn create_webview() -> WebView {
         })
     };
 
+    context.connect_initialize_web_extensions(move |context| {
+        context.set_web_extensions_directory("/usr/lib/webext-ublock-origin");
+        println!("uBlock initialized")
+    });
+
     context.set_cache_model(webkit2gtk::CacheModel::DocumentViewer);
 
     context.connect_download_started(move |_, download| {
