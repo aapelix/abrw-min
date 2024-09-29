@@ -10,7 +10,6 @@ mod webview;
 use connections::get_webview;
 use gtk::gdk::keys::constants;
 use gtk::gdk_pixbuf::Pixbuf;
-
 use gtk::{glib::Propagation, prelude::*, Box, Button, Entry, Notebook};
 use gtk::{Image, Label, Popover, Switch};
 use settings::{show_settings_window, Settings};

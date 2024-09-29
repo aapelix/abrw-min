@@ -5,7 +5,6 @@ use gtk::glib::gobject_ffi::GObject;
 use gtk::glib::{ffi::GError, translate::ToGlibPtr};
 use gtk::prelude::{FileChooserExt, FileExt, NativeDialogExt};
 use gtk::{FileChooserAction, FileChooserNative, ResponseType, Window};
-use reqwest::blocking::get;
 use std::env;
 use std::ffi::{c_void, CStr, CString};
 use std::path::Path;
@@ -14,6 +13,7 @@ use std::{
     fs::{create_dir_all, write, File},
     io::{BufReader, Read},
 };
+use tokio::runtime::Runtime;
 use webkit2gtk::{
     CookieManagerExt, Download, DownloadExt, SettingsExt, WebContext, WebContextExt, WebView,
     WebViewExt,
@@ -34,9 +34,6 @@ pub enum WebviewSetting {
     JsClipboardAccess,
 }
 
-const DATA_URL: &'static str =
-    "https://easylist-downloads.adblockplus.org/easylist_min_content_blocker.json";
-
 use std::error::Error;
 
 const BLOCK_LIST_IDENT: *const i8 = "blocklist\0".as_ptr() as *const i8;
@@ -48,7 +45,13 @@ static mut SHARED_CONTEXT: Option<WebContext> = None;
 pub fn create_webview() -> WebView {
     let context: &mut WebContext = unsafe {
         SHARED_CONTEXT.get_or_insert_with(|| {
-            let context = WebContext::default().unwrap();
+            let context: WebContext = WebContext::default().unwrap();
+
+            // enable this if you want extensions
+            //context.connect_initialize_web_extensions(move |context| {
+            //    context.set_web_extensions_directory("/usr/lib/abrw/web-extensions");
+            //});
+
             let cookie_manager =
                 WebContextExt::cookie_manager(&context).expect("Failed to init cookie manager");
 
@@ -62,11 +65,6 @@ pub fn create_webview() -> WebView {
             context
         })
     };
-
-    context.connect_initialize_web_extensions(move |context| {
-        context.set_web_extensions_directory("/usr/lib/webext-ublock-origin");
-        println!("uBlock initialized")
-    });
 
     context.set_cache_model(webkit2gtk::CacheModel::DocumentViewer);
 
@@ -197,7 +195,10 @@ unsafe extern "C" fn filter_load_callback(
             CStr::from_ptr(error_msg).to_str().unwrap_or("")
         );
 
-        let fl_buff = get_filter_list();
+        // Initialize a runtime to run the asynchronous function
+        let rt = Runtime::new().unwrap();
+        let fl_buff = rt.block_on(get_filter_list()); // Block on the async function
+
         if fl_buff.is_err() {
             println!(
                 "Failed to load filter list! Error: {}.\nIgnoring.",
@@ -240,9 +241,13 @@ pub fn add_filter(web_view: &WebView) {
     }
 }
 
-fn get_filter_list() -> Result<Vec<u8>, Box<dyn Error>> {
-    let file_name = save_filter_list_to_file()?;
+async fn get_filter_list() -> Result<Vec<u8>, Box<dyn Error>> {
+    let urls = vec![
+        "https://easylist-downloads.adblockplus.org/easylist_min_content_blocker.json", /* add more URLs here */
+    ];
 
+    let filter_list = combine_filter_lists(urls).await?;
+    let file_name = save_filter_list_to_file(filter_list).await?;
     let filter_list = File::open(file_name)?;
     let mut filter_list_reader = BufReader::new(filter_list);
     let mut filter_list_buff = Vec::new();
@@ -250,27 +255,32 @@ fn get_filter_list() -> Result<Vec<u8>, Box<dyn Error>> {
     Ok(filter_list_buff)
 }
 
-fn save_filter_list_to_file() -> Result<String, Box<dyn Error>> {
-    let resp = download_filter_list()?;
-
+async fn save_filter_list_to_file(filter_list: String) -> Result<String, Box<dyn Error>> {
     let mut conf = config_dir().unwrap();
     conf.push("swb");
     conf.push("adblock");
-
     if !conf.clone().exists() {
         create_dir_all(conf.clone())?;
     }
-
     let file_name = String::from(conf.as_os_str().to_str().unwrap()) + "/easylist.json";
-    write(file_name.clone(), resp)?;
-
+    write(file_name.clone(), filter_list)?;
     Ok(file_name)
 }
 
-fn download_filter_list() -> Result<String, Box<dyn Error>> {
-    let response = get(DATA_URL)?;
-    let text = response.text()?;
+async fn download_filter_list(url: &str) -> Result<String, Box<dyn Error>> {
+    let response = reqwest::get(url).await?;
+    let text = response.text().await?;
     Ok(text)
+}
+
+async fn combine_filter_lists(urls: Vec<&str>) -> Result<String, Box<dyn Error>> {
+    let mut filter_lists = Vec::new();
+    for url in urls {
+        let filter_list = download_filter_list(url).await?;
+        filter_lists.push(filter_list);
+    }
+    let combined_filter_list = filter_lists.join("\n");
+    Ok(combined_filter_list)
 }
 
 pub fn toggle_content_filter(webview: &WebView, enable_filter: bool) {
